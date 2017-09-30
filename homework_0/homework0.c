@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define max 100
+#define max 1000
 
 char *token;
 
