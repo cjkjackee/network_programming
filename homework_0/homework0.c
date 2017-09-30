@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define max 50
+#define max 100
 
 char *token;
 
@@ -65,15 +65,8 @@ void func (char* cmd, char* operand)
 {
     if (!strcmp(cmd,"reverse"))
     {
-        char *stack;
-        int top = 0;
+        int top = strlen(operand);
 
-        stack = (char*)malloc(max);
-        snprintf(stack,max,"%s0",operand);
-        snprintf(operand,max,"%s",stack);
-        free(stack);
-
-        for (top=0;operand[top]!='0';++top);
         for (int i=--top;i>=0;--i)
             printf("%c",operand[i]);
         printf("\n");
@@ -89,6 +82,8 @@ void func (char* cmd, char* operand)
         }
         printf("\n");
     }
+    else
+        printf("Usage: reverse||split [string]\n");
 
     return;
 }
