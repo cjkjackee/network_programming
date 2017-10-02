@@ -19,7 +19,7 @@ int main (int argv, char** argc)
 //**************** init ************************************
     if (argv < 2)
     {
-        printf("usage: ./homework0 [input file path] [split token]\n");
+        printf("usage: %s [input file path] [split token]\n",argc[0]);
         exit(1);
     }
 
