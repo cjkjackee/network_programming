@@ -32,9 +32,13 @@ int main (int argv, char** argc)
 
 //************************ file input *************************
     printf("%sInput file %s%s\n",breakline,argc[1],breakline);
-    while (fscanf(file,"%s",cmd)!=EOF)
+    while (1)
     {
-        fscanf(file,"%s",operand);
+		fgets(cmd,max,file);
+		if (feof(file))
+			break;
+		cmd = strtok(cmd," ");
+		operand = strtok(NULL,"\n");
         if (!strcmp(cmd,"reverse") || !strcmp(cmd,"split"))
             printf("%s %s\n",cmd,operand);
         func(cmd,operand);
@@ -44,20 +48,21 @@ int main (int argv, char** argc)
     printf("%sEnd of input file %s%s\n",breakline,argc[1],breakline);
 
 //************************ user mode *************************
+	operand = (char*)malloc(max);
     printf("%sUser input%s\n",starline,starline);
     while (1)
     {
-        scanf("%s",cmd);
-        if (!strcmp(cmd,"exit"))
-            break;
-        scanf("%s",operand);
+		fgets(cmd,max,stdin);
+		if (!strncmp(cmd,"exit",strlen("exit")))
+			break;
+		cmd = strtok(cmd," ");
+		operand = strtok(NULL,"\n");
         func(cmd,operand);
     }
 
 
     free(token);
     free(cmd);
-    free(operand);
     return 0;
 }
 
