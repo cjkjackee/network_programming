@@ -78,14 +78,23 @@ void func (char* cmd, char* operand)
     }
     else if (!strcmp(cmd,"split"))
     {
-        char *p;
-        p = strtok(operand,token);
+       	char *p;
+        char *str;
+        str = (char*)malloc(max);
+        p = strstr(operand,token);
         while(p!=NULL)
         {
-            printf("%s ",p);
-            p = strtok(NULL,token);
+            strncpy(str,operand,strlen(operand)-strlen(p));
+            if(!(strlen(operand)-strlen(p)))
+                snprintf(str,max,"%s","");
+            printf("%s",str);
+            p += strlen(token)*sizeof(char);
+            snprintf(operand,max,"%s",p);
+            printf(" ");
+            p = strstr(operand,token);
         }
-        printf("\n");
+        printf("%s\n",operand);
+        free(str);
     }
     else
         printf("Usage: reverse||split [string]\n");
