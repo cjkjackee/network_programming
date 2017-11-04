@@ -18,7 +18,8 @@ int main (int argc, char** argv)
     fd_set sockset;
     int chk;
     int port;
-    char buffer[max];
+    char send_buffer[max];
+	char recv_buffer[max];
     struct sockaddr_in server;
 
     if (argc < 3)
@@ -54,18 +55,28 @@ int main (int argc, char** argv)
         select(sockfd+1,&sockset,NULL,NULL,NULL);
         if (FD_ISSET(fileno(stdin),&sockset))
         {
-            fgets(buffer,sizeof(buffer),stdin);
-            send(sockfd,buffer,sizeof(buffer),0);
-            if (!strncmp(buffer,"exit",4))
+            fgets(send_buffer,sizeof(send_buffer),stdin);
+            if (!strncmp(send_buffer,"exit",4))
                 break;
-            memset(buffer,0,sizeof(buffer));
+            send(sockfd,send_buffer,sizeof(send_buffer),0);
+            memset(send_buffer,0,sizeof(send_buffer));
         }
         
         if (FD_ISSET(sockfd,&sockset))
         {
-            if((chk=recv(sockfd,buffer,sizeof(buffer),0)<0))
+			memset(recv_buffer,0,sizeof(recv_buffer));
+            if((chk=recv(sockfd,recv_buffer,sizeof(recv_buffer),0))<=0)
+			{
+				if (!chk)
+				{
+					printf("connection close\n");
+					return 0;
+				}
                 perror("recive error");
-            printf("%s",buffer);
+				exit(1);
+			}
+			else
+            	printf("%s",recv_buffer);
         }
     }
 

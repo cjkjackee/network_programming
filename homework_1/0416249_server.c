@@ -7,7 +7,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#define max 1024
+#define max 1500
 struct user
 {
 	int sockfd;
@@ -34,7 +34,7 @@ int main (int argc, char**argv)
 	char send_buffer[max];
 	struct sockaddr_in address;	
 	int setlen = 0;
-	fd_set sockset,tmp;
+	fd_set tmp;
 	struct user* now;
 
 	if (argc<2)
@@ -95,7 +95,7 @@ int main (int argc, char**argv)
 				if (connfd>=setlen)
 					setlen = connfd + 1;
 				snprintf(send_buffer,sizeof(send_buffer),"%s %s From: %s\n",server_msg,h_msg,list->ip);
-				send(connfd,send_buffer,sizeof(send_buffer),0);
+				send(connfd,send_buffer,strlen(send_buffer)+1,0);
 				for (now=list->next->next;now!=list->next;now=now->next)
 				{
 					if (now->sockfd==connfd)
@@ -103,12 +103,13 @@ int main (int argc, char**argv)
 					else 
 					{
 						snprintf(send_buffer,sizeof(send_buffer),"%s Someone is coming!\n",server_msg);
-						send(now->sockfd,send_buffer,sizeof(send_buffer),0);
+						send(now->sockfd,send_buffer,strlen(send_buffer)+1,0);
 					}
 				}
 			}
 		}
 
+		memset(recv_buffer,0,sizeof(recv_buffer));
 		for (now=list->next;now->next!=list->next;now=now->next)
 		{
 			if (FD_ISSET(now->next->sockfd,&tmp))
@@ -123,10 +124,8 @@ int main (int argc, char**argv)
 						if (it==now->next)
 							continue;
 						else
-							send(it->sockfd,send_buffer,sizeof(send_buffer),0);
+							send(it->sockfd,send_buffer,strlen(send_buffer)+1,0);
 					}
-					close(now->next->sockfd);
-					FD_CLR(now->next->sockfd,&sockset);
 					deletUser(now);
 				}
 				else 
@@ -144,6 +143,7 @@ void service (int connfd, char* buffer, struct user* now)
 	char *p;
 	struct user* it;
 
+	memset(send_buff,0,sizeof(send_buff));
 	// command who
 	if (!strncmp(buffer,"who",3))
 	{
@@ -165,11 +165,11 @@ void service (int connfd, char* buffer, struct user* now)
 		char name[30];
 		char old[30];
 
-		p = strstr(buffer,"name");
-		p += 5*sizeof(char);
-		snprintf(name,strlen(p),"%s",p);
+		memset(name,0,sizeof(name));
+		sscanf(buffer,"%s %s",old,name);
 		i = atoi(name);	
-		strncpy(old,now->name,sizeof(now->name));
+		memset(old,0,sizeof(old));
+		strncpy(old,now->name,strlen(now->name));
 		// new name is anonymous.
 		if (!strcmp(name,"anonymous"))
 			snprintf(send_buff,sizeof(send_buff),"%s ERROR: Username cannot be anonymous.\n",server_msg);
@@ -190,7 +190,7 @@ void service (int connfd, char* buffer, struct user* now)
 			}
 			// success to change
 			snprintf(send_buff,sizeof(send_buff),"%s You're now know as %s\n",server_msg,name);
-			snprintf(now->name,sizeof(name),"%s",name);
+			snprintf(now->name,strlen(name)+1,"%s",name);
 			send(connfd,send_buff,strlen(send_buff)+1,0);
 			snprintf(send_buff,sizeof(send_buff),"%s %s is now known as %s.\n",server_msg,old,name);
 			for (it=list->next->next;it!=list->next;it=it->next)
@@ -221,22 +221,37 @@ void service (int connfd, char* buffer, struct user* now)
 				if (!strcmp(reciver,it->name))
 				{
 					snprintf(send_buff,sizeof(send_buff),"%s %s tell you %s",server_msg,now->name,p);
-					send(it->sockfd,send_buff,sizeof(send_buff),0);
+					send(it->sockfd,send_buff,strlen(send_buff)+1,0);
 					break;
 				}
 			}
 			snprintf(send_buff,sizeof(send_buff),"%s SUCCESS: Your message has been sent.\n",server_msg);
+			send(now->sockfd,send_buff,strlen(send_buff)+1,0);
+			return;
 		}
 	}
-	// TODO: broadcast message
+	// broadcast message
 	else if (!strncmp(buffer,"yell",4))
 	{
 		snprintf(send_buff,sizeof(send_buff),"%s %s %s",server_msg,now->name,buffer);
 		for (it=list->next->next;it!=list->next;it=it->next)
-		{
-			send(it->sockfd,send_buff,strlen(send_buff)+1,0);
-		}
+			send(it->sockfd,send_buff,strlen(send_buff),0);
 		return;
+	}
+	// for telnet exit 
+	else if (!strncmp(buffer,"exit",4))
+	{
+		struct user* it;
+
+		snprintf(send_buff,sizeof(send_buff),"%s %s is offline.\n",server_msg,now->name);
+		for (it=list->next;it->next!=list->next;it=it->next)
+		{
+			if (it->next==now)
+				now = it;
+			else
+				send(it->next->sockfd,send_buff,strlen(send_buff)+1,0);
+		}
+		deletUser(now);
 	}
 	// error message
 	else 
@@ -275,6 +290,7 @@ void deletUser(struct user* now)
 		list = now;
 	now->next = del->next;
 	FD_CLR(del->sockfd,&sockset);
+	close(del->sockfd);
 	free(del);
 	return;
 }
