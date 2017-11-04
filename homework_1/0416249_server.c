@@ -37,8 +37,7 @@ int main (int argc, char**argv)
 	fd_set tmp;
 	struct user* now;
 
-	if (argc<2)
-	{
+	if (argc<2) {
 		printf("usage: ./server <server port>\n");
 		exit(1);
 	}
@@ -214,6 +213,8 @@ void service (int connfd, char* buffer, struct user* now)
 		p = strtok(NULL,"");
 		if (!strcmp(reciver,"anonymous"))
 			snprintf(send_buff,sizeof(send_buff),"%s ERROR: The client to which you sent is anonymous.\n",server_msg);
+		else if (!strncmp(now->name,"anonymous",9))
+			snprintf(send_buff,sizeof(send_buff),"%s ERROR: You are anonymous.\n",server_msg);
 		else 
 		{
 			for (it=list->next->next;it!=list->next;it=it->next)
@@ -225,7 +226,10 @@ void service (int connfd, char* buffer, struct user* now)
 					break;
 				}
 			}
-			snprintf(send_buff,sizeof(send_buff),"%s SUCCESS: Your message has been sent.\n",server_msg);
+			if (it==list->next)	
+				snprintf(send_buff,sizeof(send_buff),"%s ERROR: The receiver doesn't exist.\n",server_msg);
+			else
+				snprintf(send_buff,sizeof(send_buff),"%s SUCCESS: Your message has been sent.\n",server_msg);
 			send(now->sockfd,send_buff,strlen(send_buff)+1,0);
 			return;
 		}
@@ -275,7 +279,7 @@ void addUser(int fd)
 	port = ntohs(guest.sin_port);
 	comming = (struct user*)malloc(sizeof(struct user));
 	comming->sockfd = fd;
-	strncpy(comming->name,"anonymous",9);
+	snprintf(comming->name,strlen("anonymous")+1,"anonymous");
 	snprintf(comming->ip,sizeof(comming->ip),"%s/%d",clientIP,port);
 	comming->next = list->next;
 	list->next = comming;
