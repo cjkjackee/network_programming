@@ -138,11 +138,14 @@ int main (int argc, char**argv)
 
 void service (int connfd, char* buffer, struct user* now)
 {
+	bool err = false;
 	char send_buff[max];
 	char *p;
 	struct user* it;
 
 	memset(send_buff,0,sizeof(send_buff));
+	if (!strcmp(buffer,"\n") || !strcmp(buffer,"\r\n") )
+		return;	
 	// command who
 	if (!strncmp(buffer,"who",3))
 	{
@@ -170,7 +173,9 @@ void service (int connfd, char* buffer, struct user* now)
 		memset(old,0,sizeof(old));
 		strncpy(old,now->name,strlen(now->name));
 		// new name is anonymous.
-		if (!strcmp(name,"anonymous"))
+		if (!strlen(name))
+			err = true;
+		else if (!strcmp(name,"anonymous"))
 			snprintf(send_buff,sizeof(send_buff),"%s ERROR: Username cannot be anonymous.\n",server_msg);
 		// new name does not consist of 2~12 English letters.
 		else if (strlen(name)<2 || strlen(name)>12 || (strlen(name)==2 && i>0))
@@ -203,15 +208,19 @@ void service (int connfd, char* buffer, struct user* now)
 		}
 	}
 	// private message
-	else if (!strncmp(buffer,"tell",4))
+	else if (!strncmp(buffer,"tell ",5))
 	{
 		char *reciver;
+		char name[30];
 
-		p = strstr(buffer,"tell");
-		p += 5*sizeof(char);
-		reciver = strtok(p," ");
+		p = strtok(buffer," ");
+		reciver = strtok(NULL," ");
+		strcpy(name,reciver);
 		p = strtok(NULL,"");
-		if (!strcmp(reciver,"anonymous"))
+		
+		if (reciver==NULL || !strlen(name) || !strcmp(name,"\n") || !strcmp(name,"\r\n") || p==NULL || !strncmp(p,"\r\n",sizeof("\r\n")) || !strncmp(p,"\n",sizeof("\n")) )
+			err = true;
+		else if(!strcmp(reciver,"anonymous"))
 			snprintf(send_buff,sizeof(send_buff),"%s ERROR: The client to which you sent is anonymous.\n",server_msg);
 		else if (!strncmp(now->name,"anonymous",9))
 			snprintf(send_buff,sizeof(send_buff),"%s ERROR: You are anonymous.\n",server_msg);
@@ -235,8 +244,8 @@ void service (int connfd, char* buffer, struct user* now)
 		}
 	}
 	// broadcast message
-	else if (!strncmp(buffer,"yell",4))
-	{
+	else if (!strncmp(buffer,"yell ",5))
+	{			
 		snprintf(send_buff,sizeof(send_buff),"%s %s %s",server_msg,now->name,buffer);
 		for (it=list->next->next;it!=list->next;it=it->next)
 			send(it->sockfd,send_buff,strlen(send_buff),0);
@@ -259,6 +268,9 @@ void service (int connfd, char* buffer, struct user* now)
 	}
 	// error message
 	else 
+		snprintf(send_buff,sizeof(send_buff),"%s ERROR: Error command.\n",server_msg);
+	
+	if (err)
 		snprintf(send_buff,sizeof(send_buff),"%s ERROR: Error command.\n",server_msg);
 
 	send(connfd,send_buff,strlen(send_buff)+1,0);
