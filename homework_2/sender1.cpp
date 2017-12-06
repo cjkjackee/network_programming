@@ -80,7 +80,7 @@ int main (int argc, char** argv)
     fstat(filefd, &fin);
 
     // start to send file
-    i = 0;
+    i = 1;
     sended = 0;
     while(sended<fin.st_size)
     {
@@ -109,5 +109,8 @@ int main (int argc, char** argv)
     }
     while(recvfrom(sockfd, rbuffer, sizeof(rbuffer), 0, (struct sockaddr*)&server, &len) < 0);
 
+    cout << "send complete, total packet = " << i-1 << endl;
+
+    close(filefd);
     return 0;
 }
