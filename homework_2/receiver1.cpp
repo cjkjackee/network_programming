@@ -1,4 +1,5 @@
 #include <iostream>
+#include <map>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,12 +24,13 @@ struct packet
 
 int main (int argc, char** argv)
 {
+	map<int,packet> file;
     int connfd, filefd;
     int l;
-    int now;
     char buffer[max];
     struct sockaddr_in address, guest;
     socklen_t glen = sizeof(guest);
+	struct packet pac;
 
     if (argc != 2)
     {
@@ -56,7 +58,7 @@ int main (int argc, char** argv)
 
 	while (1)
 	{
-		now = -1;
+		file.clear();
 		memset(buffer,0,sizeof(buffer));
 		if ( (l = recvfrom(connfd, buffer, sizeof(buffer), 0, (struct sockaddr*)&guest, &glen)) < 0)
 		{
@@ -71,7 +73,7 @@ int main (int argc, char** argv)
 			exit(1);
 		}
 
-		filefd = open(buffer, O_RDWR|O_LARGEFILE|O_APPEND|O_TRUNC|O_CREAT,0666);
+		filefd = open(buffer, O_RDWR|O_TRUNC|O_APPEND|O_CREAT,0666);
 		cout << "start to transfer " << buffer << endl;
 
 		while(1)
@@ -87,14 +89,12 @@ int main (int argc, char** argv)
 				break;
 			else
 			{
-				packet pac;
 				memset(&pac, 0, sizeof(struct packet));
 				memcpy(&pac,buffer,sizeof(struct packet));
-				if (now < pac.no)	
+				if (file.find(pac.no)==file.end())
 				{
-					now = pac.no;
-					write(filefd, pac.index, pac.size);
-					cout << "receive success, no:" << now << endl;
+					file[pac.no] = pac;
+					cout << "receive success, no:" << pac.no << endl;
 				}
 			}
 			
@@ -110,6 +110,9 @@ int main (int argc, char** argv)
 			perror("send error");
 			exit(1);
 		}
+
+		for(int x=1;x<=file.size();++x)
+			write(filefd, file[x].index, file[x].size);
 			
 		cout << "file receive complete!" << endl;
 		close(filefd);
