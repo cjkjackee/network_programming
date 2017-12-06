@@ -1,5 +1,4 @@
 #include <iostream>
-#include <map>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,15 +11,22 @@
 #include <netinet/in.h>
 using namespace std;
 
-#define max 1500
+#define max 3000
+#define pac_max 2000
+
+struct packet
+{
+	int no;
+	char index[2000];
+	unsigned int size;
+};
 
 int main (int argc, char** argv)
 {
     int connfd, filefd;
     int l;
-    int i;
+    int now;
     char buffer[max];
-    map<int,char*> file;
     struct sockaddr_in address, guest;
     socklen_t glen = sizeof(guest);
 
@@ -50,7 +56,7 @@ int main (int argc, char** argv)
 
 	while (1)
 	{
-		file.clear();	
+		now = -1;
 		memset(buffer,0,sizeof(buffer));
 		if ( (l = recvfrom(connfd, buffer, sizeof(buffer), 0, (struct sockaddr*)&guest, &glen)) < 0)
 		{
@@ -65,31 +71,31 @@ int main (int argc, char** argv)
 			exit(1);
 		}
 
-		filefd = open(buffer, O_RDWR|O_CREAT,0666);
+		filefd = open(buffer, O_RDWR|O_LARGEFILE|O_APPEND|O_TRUNC|O_CREAT,0666);
 		cout << "start to transfer " << buffer << endl;
 
 		while(1)
 		{
-			memset(buffer,0,sizeof(buffer));
+			bzero(buffer,sizeof(buffer));
 			if ( (l = recvfrom(connfd, buffer, sizeof(buffer), 0, (struct sockaddr*)&guest, &glen)) < 0)
 			{
 				perror("receive error");
 				exit(1);
 			}
-			buffer[l] = 0;
 
 			if(!strcmp(buffer,"EOF"))
 				break;
 			else
 			{
-				char* n;
-				char p[max];
-				strcpy(p,buffer);
-				n = strtok(p," ");            
-				i = atoi(n);
-				n = strtok(NULL, "");
-				file[i] = n;
-				cout << "receive success" << endl;
+				packet pac;
+				memset(&pac, 0, sizeof(struct packet));
+				memcpy(&pac,buffer,sizeof(struct packet));
+				if (now < pac.no)	
+				{
+					now = pac.no;
+					write(filefd, pac.index, pac.size);
+					cout << "receive success, no:" << now << endl;
+				}
 			}
 			
 			if ( sendto(connfd, "1\n", sizeof("1\n"), 0, (struct sockaddr*)&guest,glen) < 0)
@@ -104,11 +110,9 @@ int main (int argc, char** argv)
 			perror("send error");
 			exit(1);
 		}
-
-		for (unsigned int x=0;x<file.size();++x)
-			write(filefd, file[x], strlen(file[x]));
 			
 		cout << "file receive complete!" << endl;
+		close(filefd);
 	}
     return 0;
 }

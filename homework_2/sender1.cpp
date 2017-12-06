@@ -11,20 +11,29 @@
 #include <netdb.h>
 using namespace std;
 
-#define max 1500
+#define max 3000
+#define rmax 2000
+
+struct packet 
+{
+    int no;
+    char index[rmax];
+    unsigned int size;
+};
 
 int main (int argc, char** argv)
 {
     int sockfd, filefd;
-    long total, sended;
+    long sended;
     int i, n;
     char sbuffer[max];
-    char rbuffer[max];
+    char rbuffer[rmax];
     struct hostent* host;
     struct sockaddr_in server;
     socklen_t len;
     struct timeval tv;
     struct stat fin;
+    struct packet pac;
 
     if (argc != 4)
     {
@@ -72,18 +81,20 @@ int main (int argc, char** argv)
 
     // start to send file
     i = 0;
+    sended = 0;
     while(sended<fin.st_size)
     {
+        memset(&pac, 0, sizeof(struct packet));
         memset(rbuffer, 0, sizeof(rbuffer));
         memset(sbuffer, 0, sizeof(sbuffer));
-        n = read(filefd, rbuffer, sizeof(rbuffer));
+        n = read(filefd, pac.index, sizeof(rbuffer));
         sended += n;
         cout << "send: " << sended << endl;
-        snprintf(sbuffer, sizeof(sbuffer), "%d %s", i++, rbuffer);
-        cout << sbuffer << endl;
+        pac.no = i++;
+        pac.size = n;
         do
         {
-            if (sendto(sockfd, sbuffer, sizeof(sbuffer), 0, (struct sockaddr*)&server, sizeof(server)) < 0)
+            if (sendto(sockfd, &pac, sizeof(struct packet), 0, (struct sockaddr*)&server, sizeof(server)) < 0)
                 perror("send error");
         }
         while(recvfrom(sockfd, rbuffer, sizeof(rbuffer), 0, (struct sockaddr*)&server, &len) < 0);
