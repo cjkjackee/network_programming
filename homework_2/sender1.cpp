@@ -19,6 +19,7 @@ struct packet
     int no;
     char index[rmax];
     unsigned int size;
+	const char cmp[] = "sender1";
 };
 
 int main (int argc, char** argv)

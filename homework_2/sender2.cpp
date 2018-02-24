@@ -90,7 +90,7 @@ int main (int argc, char** argv)
     }
 
     // start to send file
-    i = 0;
+    i = 1;
     sended = 0;
     while(sended < fin.st_size)
     {

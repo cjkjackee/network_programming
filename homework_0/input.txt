@@ -1,3 +1,3 @@
-reverse abcdefg
+reverse abcdefg ijklmm
 split abdecfg
-
+split abcdedg abcffgg
